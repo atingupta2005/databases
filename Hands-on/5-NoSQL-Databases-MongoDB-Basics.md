@@ -19,6 +19,15 @@ db.users.drop();
 db.posts.drop();
 ```
 
+```js
+// Create collections explicitly
+db.createCollection("customers");
+db.createCollection("products");
+db.createCollection("orders");
+db.createCollection("users");
+db.createCollection("posts");
+```
+
 ### ✅ Insert Customers
 
 ```js
@@ -30,7 +39,7 @@ db.customers.insertMany([
     orders: [
       {
         orderNumber: 10100,
-        orderDate: ISODate("2023-07-01"),
+        orderDate: new Date("2023-07-01"),
         status: "Shipped",
         items: [
           { productCode: "S18_1749", quantity: 30, priceEach: 136.00 },
@@ -85,17 +94,84 @@ db.posts.insertMany([
 
 ---
 
-## 1. Introduction to NoSQL Databases
-
-(No changes — content still valid and comprehensive.)
+Here's your content **cleanly formatted** and ready for documentation or presentation, with consistent markdown structure, spacing, and code formatting.
 
 ---
 
-## 2. MongoDB Basics
+## 🗃️ 1. Introduction to NoSQL Databases
 
-(No changes — intro and concepts remain the same.)
+**NoSQL** (“Not Only SQL”) databases emerged to address **scalability** and **schema-flexibility** challenges faced by traditional relational systems when dealing with large volumes of semi-structured or unstructured data.
+
+### 🔑 Key Characteristics
+
+* **Schema-less data models**: Each record can have different structures, enabling rapid development and iteration
+* **Horizontal scalability**: Data is distributed across clusters of commodity servers (scale-out) instead of upgrading a single machine (scale-up)
+* **Eventual consistency (BASE)**: Trades strict ACID guarantees for high availability and partition tolerance in distributed environments
+
+### 📦 Main NoSQL Data Models
+
+* **Document Stores**
+  *e.g., MongoDB, CouchDB*
+  ➤ Store JSON/BSON documents with nested fields
+  ➤ Great for catalogs, user profiles, and CMSs
+
+* **Key-Value Stores**
+  *e.g., Redis, DynamoDB*
+  ➤ Simple key-to-value access
+  ➤ Ideal for caching, session stores, counters
+
+* **Wide-Column Stores**
+  *e.g., Cassandra, HBase*
+  ➤ Columns grouped into families
+  ➤ Optimized for time-series and analytics workloads
+
+* **Graph Databases**
+  *e.g., Neo4j, Amazon Neptune*
+  ➤ Store data as nodes and edges
+  ➤ Ideal for relationships, social networks, fraud detection
 
 ---
+
+## 🍃 2. MongoDB Basics
+
+**MongoDB** is an open-source, document-oriented NoSQL database written in C++. It stores data in **BSON** (binary JSON) format and is designed for flexibility and scale.
+
+### 🚀 Core Features
+
+* **Flexible schema**: Documents in the same collection may have different fields
+* **Rich query language**: Supports filtering, projections, aggregation pipelines, and geospatial queries
+* **Indexing**: Includes single-field, compound, multikey, full-text, and geospatial indexes
+* **Replication**: Uses replica sets for high availability and automatic failover
+* **Sharding**: Distributes large datasets across multiple servers for horizontal scalability
+
+---
+
+### 🛠 Getting Started
+
+1. **Install MongoDB** (available for Linux, Windows, macOS) or use **MongoDB Atlas** for a cloud-based solution
+2. Connect via the **`mongosh`** shell, **MongoDB Compass**, or a **programming language driver**
+3. Create databases and collections dynamically—no DDL required
+
+---
+
+### 🧾 Example MongoDB Document
+
+In the `users` collection:
+
+```json
+{
+  "_id": { "$oid": "6512f1d8c5f4a9a1b2c3d4e5" },
+  "name": "Alice",
+  "email": "alice@example.com",
+  "roles": ["admin", "user"],
+  "profile": {
+    "age": 30,
+    "city": "Mumbai"
+  },
+  "createdAt": { "$date": "2025-07-14T10:00:00Z" }
+}
+```
+
 
 ## 3. CRUD Operations in MongoDB (Now Ready-to-Run)
 
@@ -218,35 +294,3 @@ db.users.aggregate([
 ```
 
 ---
-
-### 🧪 Exercise 4: Multi-Doc Transaction – Stock & Order
-
-```js
-const session = db.getMongo().startSession();
-session.startTransaction();
-
-try {
-  const productsColl = session.getDatabase("classicmodels").products;
-  const ordersColl = session.getDatabase("classicmodels").orders;
-
-  // Decrease stock
-  productsColl.updateOne(
-    { productCode: "S10_1678" },
-    { $inc: { stock: -1 } },
-    { session }
-  );
-
-  // Insert order
-  ordersColl.insertOne({
-    orderNumber: 10110,
-    customerNumber: 104,
-    items: [{ productCode: "S10_1678", quantity: 1 }],
-    orderDate: new Date()
-  }, { session });
-
-  session.commitTransaction();
-} catch (e) {
-  session.abortTransaction();
-}
-session.endSession();
-```
