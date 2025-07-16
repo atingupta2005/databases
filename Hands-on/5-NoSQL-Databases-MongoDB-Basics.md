@@ -1,51 +1,69 @@
 # NoSQL Databases & MongoDB Basics
 
-This guide introduces you to the world of non-relational databases, focusing on MongoDB—a leading document-oriented NoSQL store—and covers foundational CRUD operations.
+**With E-Commerce Data Model Inspired by ClassicModels**
+
+This guide introduces you to the world of non-relational databases, focusing on **MongoDB**—a leading document-oriented NoSQL store—and covers foundational CRUD operations using an e-commerce-style schema.
 
 ---
 
 ## 1. Introduction to NoSQL Databases
 
-NoSQL databases (“Not Only SQL”) emerged to address scalability and schema-flexibility challenges that traditional relational systems face when handling ever-growing volumes of semi-structured or unstructured data.  
+**NoSQL** (“Not Only SQL”) databases emerged to handle scalability and schema-flexibility challenges found in traditional relational systems.
 
-Key characteristics:  
-- Schema-less data models allow each record to have different structures, enabling rapid iteration.  
-- Horizontal scalability distributes data across clusters of commodity servers, rather than scaling up a single machine.  
-- Eventual consistency (BASE) trades strict ACID guarantees for high availability and partition tolerance in distributed environments.  
+### 🔑 Key Characteristics
 
-Main NoSQL data models:  
-- **Document stores** (e.g., MongoDB, CouchDB): JSON/BSON documents with nested fields, ideal for content management and catalogs.  
-- **Key-value stores** (e.g., Redis, DynamoDB): Simple lookups by unique keys, perfect for session caching and real-time counters.  
-- **Wide-column stores** (e.g., Cassandra, HBase): Sparse tables optimized for large-scale analytics and time-series data.  
-- **Graph databases** (e.g., Neo4j, Amazon Neptune): Nodes and edges store highly connected data, powering social networks and fraud detection.  
+* **Schema-less**: Records can vary in structure
+* **Horizontally scalable**: Ideal for distributed systems
+* **Eventual consistency**: BASE over ACID in many cases
+* **Flexible formats**: JSON-like documents, key-value pairs, graphs, etc.
+
+### 📦 NoSQL Data Models
+
+| Type              | Description           | Examples              |
+| ----------------- | --------------------- | --------------------- |
+| **Document**      | JSON-like objects     | MongoDB, CouchDB      |
+| **Key-Value**     | Simple keys and blobs | Redis, DynamoDB       |
+| **Column-Family** | Wide, sparse tables   | Cassandra, HBase      |
+| **Graph**         | Nodes and edges       | Neo4j, Amazon Neptune |
 
 ---
 
 ## 2. MongoDB Basics
 
-MongoDB is an open-source, document-oriented NoSQL database written in C++, storing data in BSON (binary JSON) format. It combines flexibility, rich query capabilities, and horizontal scaling.  
+MongoDB stores data in **BSON** (Binary JSON) documents and offers:
 
-Core features:  
-- **Flexible schema**: Documents in the same collection can have different fields and structures.  
-- **Rich query language**: Supports filtering, projection, aggregation pipelines, and geospatial queries via a JSON-like syntax.  
-- **Indexing**: Single-field, compound, multikey, text, and geospatial indexes accelerate read performance.  
-- **Replication**: Automatic failover and data redundancy via replica sets ensures high availability.  
-- **Sharding**: Distributes data across multiple shards for horizontal scalability and load balancing.  
+* 🧠 Flexible schemas
+* 🔍 Rich querying and filtering
+* ⚡ Fast indexing
+* 🔄 Replication
+* 🌍 Horizontal scaling via sharding
 
-Getting started:  
-1. **Install MongoDB** on your platform (Linux, Windows, macOS) or use **MongoDB Atlas** (cloud-hosted).  
-2. Launch the **mongo** shell or connect via a driver in your application language.  
-3. Create a database and collection on first write—no DDL required.  
+### 👨‍💻 Getting Started
 
-Example document in the `users` collection:  
+1. **Install MongoDB** or use [MongoDB Atlas](https://www.mongodb.com/cloud/atlas)
+2. **Use mongo shell or Compass GUI**
+3. **Write data directly—no schema declaration required**
+
+---
+
+### 📄 Sample MongoDB Document: Customer with Orders
+
 ```js
 {
-  _id: ObjectId("6512f1d8c5f4a9a1b2c3d4e5"),
-  name: "Alice",
-  email: "alice@example.com",
-  roles: ["admin","user"],
-  profile: { age: 30, city: "Mumbai" },
-  createdAt: ISODate("2025-07-14T10:00:00Z")
+  customerNumber: 103,
+  customerName: "Atelier graphique",
+  country: "France",
+  orders: [
+    {
+      orderNumber: 10100,
+      orderDate: ISODate("2023-07-01"),
+      status: "Shipped",
+      items: [
+        { productCode: "S18_1749", quantity: 30, priceEach: 136.00 },
+        { productCode: "S18_2248", quantity: 50, priceEach: 55.09 }
+      ]
+    }
+  ]
 }
 ```
 
@@ -53,94 +71,171 @@ Example document in the `users` collection:
 
 ## 3. CRUD Operations in MongoDB
 
-Perform basic data operations directly via the mongo shell or a driver. Each method targets a single collection.
-
 ### 3.1 Create
 
-- **`insertOne(doc)`**: Add one document.  
-- **`insertMany([doc1, doc2, …])`**: Add multiple documents.
-
 ```js
-// Insert a single user
-db.users.insertOne({
-  name: "Bob",
-  email: "bob@example.com",
-  roles: ["user"]
+// Insert one customer
+db.customers.insertOne({
+  customerNumber: 104,
+  customerName: "Signal Gift Stores",
+  country: "USA"
 });
 
-// Insert multiple users
-db.users.insertMany([
-  { name: "Carol", email: "carol@example.com" },
-  { name: "Dave",  email: "dave@example.com"  }
+// Insert many products
+db.products.insertMany([
+  { productCode: "S10_1678", name: "Chopper", price: 48.81 },
+  { productCode: "S10_1949", name: "Renault 1300", price: 98.58 }
 ]);
 ```
 
+---
 
 ### 3.2 Read
 
-- **`find(filter, projection)`**: Retrieve all matching documents.  
-- **`findOne(filter, projection)`**: Retrieve the first matching document.
-
 ```js
-// All admins, only show name and email
-db.users.find(
-  { roles: "admin" },
-  { _id: 0, name: 1, email: 1 }
-);
+// Find customers in France
+db.customers.find({ country: "France" }, { customerName: 1 });
 
-// Single user lookup
-db.users.findOne({ email: "alice@example.com" });
+// Get one product by code
+db.products.findOne({ productCode: "S10_1678" });
 ```
 
+---
 
 ### 3.3 Update
 
-- **`updateOne(filter, updateDoc)`**: Modify the first matching document.  
-- **`updateMany(filter, updateDoc)`**: Modify all matching documents.  
-- **`replaceOne(filter, replacementDoc)`**: Replace the entire document.
-
 ```js
-// Promote Bob to admin
-db.users.updateOne(
-  { email: "bob@example.com" },
-  { $addToSet: { roles: "admin" } }
+// Add an order to a customer
+db.customers.updateOne(
+  { customerNumber: 104 },
+  { $push: {
+      orders: {
+        orderNumber: 10105,
+        status: "In Process",
+        orderDate: new Date(),
+        items: [
+          { productCode: "S10_1949", quantity: 2, priceEach: 98.58 }
+        ]
+      }
+    }
+  }
 );
 
-// Change default role for all users without roles
-db.users.updateMany(
-  { roles: { $exists: false } },
-  { $set: { roles: ["user"] } }
-);
-
-// Replace Carol's document completely
-db.users.replaceOne(
-  { name: "Carol" },
-  { name: "Carol", email: "carol@newdomain.com", roles: ["editor"] }
+// Update product price
+db.products.updateOne(
+  { productCode: "S10_1678" },
+  { $set: { price: 52.00 } }
 );
 ```
 
+---
 
 ### 3.4 Delete
 
-- **`deleteOne(filter)`**: Remove the first matching document.  
-- **`deleteMany(filter)`**: Remove all matching documents.
-
 ```js
-// Delete Dave by email
-db.users.deleteOne({ email: "dave@example.com" });
+// Delete a product
+db.products.deleteOne({ productCode: "S10_1949" });
 
-// Remove all test users
-db.users.deleteMany({ email: /@test\.com$/ });
+// Delete customers in test region
+db.customers.deleteMany({ country: /Test/i });
 ```
-
 
 ---
 
 ## 4. Further Exercises
 
-1. Insert three sample blog posts into a `posts` collection and query those with more than 10 comments.  
-2. Create a compound index on `users(email, createdAt)` and use `explain()` to compare query plans with and without the index.  
-3. Write an aggregation pipeline to calculate average `roles` array length per user.  
-4. Demonstrate a multi-document ACID transaction updating two collections: decrement product stock and insert order.
+Here are 4 advanced MongoDB exercises using your e-commerce data model:
 
-Explore these operations in MongoDB Atlas or your local instance to solidify your NoSQL and MongoDB fundamentals.
+---
+
+### 🧪 Exercise 1: Insert and Query Blog Posts
+
+**Insert into `posts` collection and filter based on comment count.**
+
+✅ **Solution**:
+
+```js
+db.posts.insertMany([
+  { title: "MongoDB Tips", comments: ["Good", "Helpful"] },
+  { title: "ACID vs BASE", comments: ["Nice", "Detailed", "Well-written"] },
+  { title: "Sharding Explained", comments: [] }
+]);
+
+db.posts.find(
+  { $expr: { $gt: [ { $size: "$comments" }, 2 ] } }
+);
+```
+
+---
+
+### 🧪 Exercise 2: Indexing and `explain()`
+
+**Create a compound index and measure performance.**
+
+✅ **Solution**:
+
+```js
+db.customers.createIndex({ customerName: 1, country: 1 });
+
+db.customers.find(
+  { customerName: "Signal Gift Stores", country: "USA" }
+).explain("executionStats");
+```
+
+---
+
+### 🧪 Exercise 3: Aggregation – Average Role Count
+
+✅ **Solution**:
+
+```js
+db.users.aggregate([
+  {
+    $project: {
+      name: 1,
+      roleCount: { $size: "$roles" }
+    }
+  },
+  {
+    $group: {
+      _id: null,
+      avgRoleCount: { $avg: "$roleCount" }
+    }
+  }
+]);
+```
+
+---
+
+### 🧪 Exercise 4: Multi-Document Transaction
+
+✅ **Use case**: Reduce product stock & insert order atomically
+
+```js
+const session = db.getMongo().startSession();
+session.startTransaction();
+
+try {
+  const productsColl = session.getDatabase("classicmodels").products;
+  const ordersColl = session.getDatabase("classicmodels").orders;
+
+  productsColl.updateOne(
+    { productCode: "S10_1678" },
+    { $inc: { stock: -1 } },
+    { session }
+  );
+
+  ordersColl.insertOne({
+    orderNumber: 10110,
+    customerNumber: 104,
+    items: [{ productCode: "S10_1678", quantity: 1 }],
+    orderDate: new Date()
+  }, { session });
+
+  session.commitTransaction();
+} catch (e) {
+  session.abortTransaction();
+}
+session.endSession();
+```
+

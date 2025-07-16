@@ -1,12 +1,15 @@
 # Relational vs Non-Relational Databases
 
-This guide explores the two dominant data-storage paradigms—tabular, schema-driven relational databases and flexible, schema-less non-relational (NoSQL) stores. You’ll learn their core differences, strengths, and when to choose each.
+**Using ClassicModels (SQL) and a MongoDB document schema**
+
+This guide explores the two dominant data-storage paradigms—tabular, schema-driven **relational databases** and flexible, schema-less **non-relational (NoSQL)** stores. You’ll learn their core differences, strengths, and when to choose each.
 
 ---
 
 ## 1. Overview
 
-Relational databases organize data into tables of rows and columns with a fixed schema and strong ACID guarantees. Non-relational databases (NoSQL) store data in document, key-value, column-family, or graph formats, trading some transactional strictness for horizontal scalability and flexible schemas.
+Relational databases organize data into **tables** with strict schemas and strong transactional guarantees.
+Non-relational databases (NoSQL) store data in **document**, **key-value**, **column-family**, or **graph** formats, prioritizing **scalability** and **flexibility** over rigid structure.
 
 ---
 
@@ -14,43 +17,54 @@ Relational databases organize data into tables of rows and columns with a fixed 
 
 ### 2.1 Key Characteristics
 
-- Tables with well-defined columns and data types  
-- Primary keys uniquely identify rows; foreign keys link tables  
-- SQL for querying, reporting, and enforcing business rules  
-- ACID compliance ensures atomic, consistent, isolated, durable transactions  
-- Vertical scaling (bigger server) and limited horizontal scaling
+* Tables with **defined columns and data types**
+* **Primary keys** uniquely identify rows; **foreign keys** link tables
+* SQL for querying, filtering, aggregation, and updates
+* **ACID** compliance ensures reliable transactions
+* Scales vertically (more RAM/CPU) with limited horizontal scale
+
+---
 
 ### 2.2 Common Examples
 
-- MySQL  
-- PostgreSQL  
-- Microsoft SQL Server  
-- Oracle Database  
-- SQLite
+* MySQL
+* PostgreSQL
+* Microsoft SQL Server
+* Oracle
+* SQLite
 
-### 2.3 Hands-On Example: MySQL
+---
 
-1. Create a `products` table:
-   ```sql
-   CREATE TABLE products (
-     product_id   INT PRIMARY KEY,
-     name         VARCHAR(100),
-     price        DECIMAL(10,2)
-   );
-   ```
-2. Insert sample data:
-   ```sql
-   INSERT INTO products VALUES
-     (1, 'Widget', 19.99),
-     (2, 'Gadget', 29.49);
-   ```
-3. Query with a JOIN:
-   ```sql
-   -- Assume orders table exists with product_id FK
-   SELECT o.order_id, p.name, p.price
-   FROM orders o
-   JOIN products p ON o.product_id = p.product_id;
-   ```
+### 2.3 Hands-On Example: ClassicModels in MySQL
+
+#### 1. Table Definition: `products`
+
+```sql
+CREATE TABLE products (
+  productCode        VARCHAR(15) PRIMARY KEY,
+  productName        VARCHAR(70),
+  productLine        VARCHAR(50),
+  buyPrice           DECIMAL(10,2)
+);
+```
+
+#### 2. Inserting Sample Data
+
+```sql
+INSERT INTO products (productCode, productName, productLine, buyPrice) VALUES
+('S10_1678', '1969 Harley Davidson Ultimate Chopper', 'Motorcycles', 48.81),
+('S10_1949', '1952 Alpine Renault 1300', 'Classic Cars', 98.58);
+```
+
+#### 3. Join Query: Orders with Product Info
+
+```sql
+SELECT o.orderNumber, p.productName, od.quantityOrdered, od.priceEach
+FROM orders o
+JOIN orderdetails od ON o.orderNumber = od.orderNumber
+JOIN products p ON od.productCode = p.productCode
+LIMIT 5;
+```
 
 ---
 
@@ -58,73 +72,150 @@ Relational databases organize data into tables of rows and columns with a fixed 
 
 ### 3.1 Key Characteristics
 
-- Schema-less storage: documents, key-values, wide columns, or graphs  
-- Horizontal scaling across commodity servers  
-- Eventual consistency models (BASE) or tunable consistency  
-- Designed for large volumes of unstructured or semi-structured data  
-- Flexible data models adapt to changing requirements
+* Schema-less (or loosely enforced) data models
+* Horizontal scaling via sharding or replication
+* Eventual consistency or tunable consistency (BASE)
+* Handles **semi-structured/unstructured** data
+* Faster for insert-heavy, real-time applications
 
-### 3.2 Four NoSQL Data Models
+---
 
-- **Key-Value Stores** (e.g., Redis): O(1) lookups by unique key  
-- **Document Stores** (e.g., MongoDB): JSON/BSON documents with nested fields  
-- **Column-Family Stores** (e.g., Cassandra): sparse, wide tables grouped by column families  
-- **Graph Databases** (e.g., Neo4j): nodes and relationships for highly interconnected data
+### 3.2 NoSQL Data Models
 
-### 3.3 Common Examples
+* **Key-Value** (e.g., Redis)
+* **Document Store** (e.g., MongoDB)
+* **Column Family** (e.g., Cassandra)
+* **Graph** (e.g., Neo4j)
 
-- MongoDB (document)  
-- Redis (key-value)  
-- Apache Cassandra (column-family)  
-- Neo4j (graph)  
-- Amazon DynamoDB (key-value/document hybrid)
+---
 
-### 3.4 Hands-On Example: MongoDB
+### 3.3 Common NoSQL Examples
 
-1. Create a `customers` collection:
-   ```js
-   db.customers.insertMany([
-     { _id: 12001000, name: 'Atin', city: 'Mumbai' },
-     { _id: 12001001, name: 'Riya', city: 'Delhi' }
-   ]);
-   ```
-2. Query by city:
-   ```js
-   db.customers.find({ city: 'Mumbai' }, { name: 1 });
-   ```
-3. Update a document:
-   ```js
-   db.customers.updateOne(
-     { _id: 12001000 },
-     { $set: { city: 'New Delhi' } }
-   );
-   ```
+* **MongoDB** (document)
+* **Redis** (key-value)
+* **Cassandra** (column-family)
+* **Neo4j** (graph)
+* **Amazon DynamoDB** (document & key-value hybrid)
+
+---
+
+### 3.4 Hands-On Example: MongoDB Document Model
+
+Imagine the ClassicModels `customers`, `orders`, and `orderdetails` tables embedded into one document:
+
+#### 1. Insert a document into `customers` collection:
+
+```js
+db.customers.insertOne({
+  customerNumber: 103,
+  customerName: "Atelier graphique",
+  contactName: "Carine Schmitt",
+  city: "Nantes",
+  country: "France",
+  orders: [
+    {
+      orderNumber: 10100,
+      orderDate: "2003-01-06",
+      status: "Shipped",
+      orderDetails: [
+        { productCode: "S18_1749", quantityOrdered: 30, priceEach: 136.00 },
+        { productCode: "S18_2248", quantityOrdered: 50, priceEach: 55.09 }
+      ]
+    }
+  ]
+});
+```
+
+#### 2. Query orders by customer country:
+
+```js
+db.customers.find(
+  { country: "France" },
+  { customerName: 1, orders: 1 }
+);
+```
+
+#### 3. Update an embedded field:
+
+```js
+db.customers.updateOne(
+  { customerNumber: 103, "orders.orderNumber": 10100 },
+  { $set: { "orders.$.status": "Delivered" } }
+);
+```
 
 ---
 
 ## 4. Feature Comparison
 
-| Aspect                | Relational (SQL)               | Non-Relational (NoSQL)           |
-|-----------------------|--------------------------------|----------------------------------|
-| Schema                | Fixed, rigid                   | Dynamic, flexible                |
-| Query Language        | SQL                            | API calls / query DSL            |
-| Transactions          | ACID                           | BASE / tunable consistency       |
-| Scaling               | Vertical (limited horizontal)  | Horizontal (sharding)            |
-| Data Types            | Structured                      | Structured, semi/unstructured    |
-| Typical Use Cases     | OLTP, reporting, complex joins | Big data, real-time, flexible     |
+| Aspect            | Relational (SQL)       | Non-Relational (NoSQL)                  |
+| ----------------- | ---------------------- | --------------------------------------- |
+| Schema            | Fixed, strict          | Flexible, dynamic                       |
+| Query Language    | SQL                    | MongoDB Query API / JSON DSL            |
+| Transactions      | Full ACID              | BASE / limited transaction scope        |
+| Scaling           | Vertical (scale-up)    | Horizontal (scale-out)                  |
+| Data Type Support | Structured (tables)    | Semi-structured / nested                |
+| Typical Use Cases | OLTP, reporting, joins | Real-time analytics, microservices, IoT |
 
 ---
 
 ## 5. Choosing Between SQL and NoSQL
 
-- Use **relational** when your data is highly structured, relationships and transactions matter, you need complex joins, and strong consistency.  
-- Use **non-relational** when your data is large, unstructured or evolving, you require horizontal scale and flexible schemas, and can tolerate eventual consistency.
+| Choose SQL if...                               | Choose NoSQL if...                                |
+| ---------------------------------------------- | ------------------------------------------------- |
+| Data is highly structured                      | Schema changes frequently                         |
+| You need strong consistency and constraints    | You prioritize speed and scale                    |
+| Reporting, joins, and ACID transactions matter | You store nested, document-like data              |
+| Workloads are write-light, read-heavy          | Workloads are write-heavy or globally distributed |
 
 ---
 
 ## 6. Exercises
 
-1. Design a **relational** schema for an e-commerce site: `users`, `products`, `orders`.  
-2. Model the same domain in **MongoDB** as collections with nested order items.  
-3. Benchmark a query that filters 1 million rows by index vs. full table scan in MySQL.  
-4. Shard a MongoDB collection across two replica sets and measure read/write performance.
+### 1. Design a Relational E-Commerce Schema
+
+Use `ClassicModels` structure:
+
+* **customers**
+* **orders**
+* **orderdetails**
+* **products**
+* **payments**
+
+> Diagram relationships and explain foreign key usage.
+
+---
+
+### 2. Model the Same in MongoDB
+
+Design a document structure with embedded `orders` inside `customers`, and `orderDetails` inside each order.
+
+```json
+{
+  "customerNumber": 104,
+  "customerName": "Signal Gift Stores",
+  "orders": [
+    {
+      "orderNumber": 10101,
+      "orderDate": "2003-01-09",
+      "orderDetails": [
+        { "productCode": "S18_2325", "quantityOrdered": 25, "priceEach": 108.06 }
+      ]
+    }
+  ]
+}
+```
+
+---
+
+### 3. Benchmark Index vs Full Scan (MySQL)
+
+```sql
+-- No index
+EXPLAIN SELECT * FROM customers WHERE country = 'France';
+
+-- With index
+CREATE INDEX idx_country ON customers(country);
+EXPLAIN SELECT * FROM customers WHERE country = 'France';
+```
+

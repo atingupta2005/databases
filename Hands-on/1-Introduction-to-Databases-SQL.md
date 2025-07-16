@@ -1,168 +1,222 @@
-# Introduction to Databases & SQL – Gyan Data
+# 🗄️ Introduction to Databases & SQL – Gyan Data
 
-This module builds your foundation in data storage and retrieval using SQL. 
+**Using the `ClassicModels` Sample Database**
 
-## What Is a Database
-
-A **database** is an organized collection of structured information, or **data**, stored electronically. Relational databases store data in **tables**, each made up of **rows** (records) and **columns** (attributes).  
-
-Benefits of using a relational database:  
-- Data Integrity: Enforced by schemas, keys, and constraints  
-- Scalability: Can handle millions of rows efficiently  
-- Concurrency: Multiple users can read/write safely  
-- SQL Standard: Powerful, declarative language for querying  
-
-Real-world analogy: Think of a database as a library.  
-- Tables are bookshelves  
-- Rows are books  
-- Columns are chapters in each book  
+This module builds your foundation in relational data storage and retrieval using SQL. You'll work with the `ClassicModels` sample database, which simulates a mid-sized international car model retailer.
 
 ---
 
-## SQL Basics
+## 📚 What Is a Database
 
-**SQL** (Structured Query Language) is the industry standard for interacting with relational databases.  
+A **database** is an organized collection of structured information, stored electronically. Relational databases store data in **tables**, composed of **rows** (records) and **columns** (fields/attributes).
 
-1. Data Definition Language (DDL)  
-   - CREATE, ALTER, DROP — define and modify schemas  
-2. Data Manipulation Language (DML)  
-   - SELECT, INSERT, UPDATE, DELETE — read and change data  
-3. Data Control Language (DCL)  
-   - GRANT, REVOKE — permission management  
-4. Transaction Control  
-   - COMMIT, ROLLBACK — ensure safe, all-or-nothing operations  
+**Benefits of relational databases:**
 
-We’ll assume a **MySQL** environment. Commands shown below can be adapted to PostgreSQL, SQL Server, or SQLite.
+* ✅ Data Integrity — schemas, keys, constraints enforce correctness
+* ✅ Scalability — efficiently handles millions of rows
+* ✅ Concurrency — multiple users can read/write safely
+* ✅ Declarative Queries — SQL makes data easy to extract
 
----
+### 🎓 Real-World Analogy
 
-## Setting Up the Sample Table
+Think of a database as a **library**:
 
-1. Save the attached CSV as `customers.csv` in your working directory.  
-2. Connect to MySQL:  
-   ```bash
-   mysql -u your_user -p your_database
-   ```  
-3. Create and load the **customers** table:
-
-   ```sql
-   -- Remove if exists
-   DROP TABLE IF EXISTS customers;
-
-   -- Define schema matching the CSV header
-   CREATE TABLE customers (
-     customerid              BIGINT,
-     cust_consttype_id       INT,
-     cust_categoryid         INT,
-     profession              VARCHAR(50),
-     age                     INT,
-     sex                     CHAR(1),
-     marital_status          CHAR(1),
-     qualification           VARCHAR(20),
-     no_of_dependent         INT,
-     occupation              VARCHAR(50),
-     position                VARCHAR(20),
-     gross_income            DECIMAL(18,4),
-     pre_jobyears            INT,
-     nettakehomeincome       DECIMAL(18,4),
-     branch_pincode          VARCHAR(6)
-   );
-
-   -- Load data from CSV
-   LOAD DATA LOCAL INFILE 'customers.csv'
-   INTO TABLE customers
-   FIELDS TERMINATED BY ','
-   OPTIONALLY ENCLOSED BY '"'
-   LINES TERMINATED BY '\n'
-   IGNORE 1 ROWS;
-   ```
+* **Tables** are bookshelves
+* **Rows** are books
+* **Columns** are chapters or topics in each book
 
 ---
 
-## Basic SQL Queries
+## 🛠️ SQL Basics
 
-### 1. Retrieving All Rows
+**SQL** (Structured Query Language) is the standard for interacting with relational databases.
 
-Fetch every column for the first 10 customers:
+| SQL Component | Keywords                               | Description                        |
+| ------------- | -------------------------------------- | ---------------------------------- |
+| DDL           | `CREATE`, `ALTER`, `DROP`              | Define and modify table structures |
+| DML           | `SELECT`, `INSERT`, `UPDATE`, `DELETE` | Retrieve or change data            |
+| DCL           | `GRANT`, `REVOKE`                      | Control user permissions           |
+| TCL           | `COMMIT`, `ROLLBACK`                   | Manage multi-step transactions     |
+
+We’ll use a **MySQL** environment with the `ClassicModels` schema.
+
+---
+
+## 🧰 Setting Up the Sample Database
+
+### Step 1: Download SQL File
+
+Download from:
+[https://www.mysqltutorial.org/getting-started-with-mysql/mysql-sample-database/](https://www.mysqltutorial.org/getting-started-with-mysql/mysql-sample-database/)
+
+### Step 2: Import into MySQL
+
+```bash
+mysql -u your_user -p < mysqlsampledatabase.sql
+```
+
+### Step 3: Verify
+
+```sql
+USE classicmodels;
+SHOW TABLES;
+```
+
+---
+
+## 🧱 Table Structure: `customers`
+
+This is the primary table we'll use in this module:
+
+| Column Name              | Data Type     | Description                        |
+| ------------------------ | ------------- | ---------------------------------- |
+| `customerNumber`         | INT (PK)      | Unique ID for customer             |
+| `customerName`           | VARCHAR(50)   | Name of the customer               |
+| `contactLastName`        | VARCHAR(50)   | Last name of contact               |
+| `contactFirstName`       | VARCHAR(50)   | First name of contact              |
+| `phone`                  | VARCHAR(50)   | Contact phone                      |
+| `addressLine1/2`         | VARCHAR(50)   | Street address                     |
+| `city`                   | VARCHAR(50)   | City                               |
+| `state`                  | VARCHAR(50)   | State                              |
+| `postalCode`             | VARCHAR(15)   | ZIP or postal code                 |
+| `country`                | VARCHAR(50)   | Country                            |
+| `salesRepEmployeeNumber` | INT (FK)      | Employee assigned to this customer |
+| `creditLimit`            | DECIMAL(10,2) | Credit limit for purchasing        |
+
+---
+
+## 🧪 Basic SQL Queries
+
+### 1. View All Customer Records
 
 ```sql
 SELECT *
-FROM Customers
+FROM customers
 LIMIT 10;
 ```
 
-### 2. Selecting Specific Columns
+---
 
-Show only `customerid`, `age`, and `gross_income`:
-
-```sql
-SELECT customerid,
-       age,
-       gross_income
-FROM Customers
-LIMIT 5;
-```
-
-### 3. Filtering with WHERE
-
-Find customers older than 40:
+### 2. View Selected Columns
 
 ```sql
-SELECT customerid,
-       age,
-       nettakehomeincome
-FROM Customers
-WHERE age > 40
-ORDER BY age;
-```
-
-### 4. Combining Conditions
-
-Male customers under 35 with gross income above 100,000:
-
-```sql
-SELECT customerid,
-       age,
-       sex,
-       gross_income
-FROM Customers
-WHERE sex = 'M'
-  AND age < 35
-  AND gross_income > 100000;
-```
-
-### 5. Sorting Results
-
-List the top 5 earners by net take-home income:
-
-```sql
-SELECT customerid,
-       nettakehomeincome
-FROM Customers
-ORDER BY nettakehomeincome DESC
-LIMIT 5;
-```
-
-### 6. Column Aliasing
-
-Rename output column headers for clarity:
-
-```sql
-SELECT customerid        AS id,
-       age               AS customer_age,
-       nettakehomeincome AS net_income
-FROM Customers
+SELECT customerNumber, customerName, country
+FROM customers
 LIMIT 5;
 ```
 
 ---
 
-## Hands-On Exercises
+### 3. Filter Rows Using `WHERE`
 
-1. List all **female** customers (`sex = 'F'`) with qualification **POSTGRAD**.  
-2. Retrieve customers aged between 30 and 40 (inclusive).  
-3. Show `customerid`, `profession`, and `branch_pincode` for those whose `gross_income` is `0`.  
-4. Count how many customers have no dependents (`no_of_dependent = 0`).  
-5. Display distinct values of `qualification` present in the dataset.  
+```sql
+SELECT customerName, city, country
+FROM customers
+WHERE country = 'France';
+```
 
 ---
+
+### 4. Combine Multiple Conditions
+
+```sql
+SELECT customerName, state, creditLimit
+FROM customers
+WHERE country = 'USA'
+  AND state = 'CA';
+```
+
+---
+
+### 5. Sort Results
+
+```sql
+SELECT customerName, creditLimit
+FROM customers
+ORDER BY creditLimit DESC
+LIMIT 5;
+```
+
+---
+
+### 6. Use Column Aliases
+
+```sql
+SELECT customerNumber AS id,
+       customerName   AS name,
+       creditLimit    AS max_credit
+FROM customers
+LIMIT 5;
+```
+
+---
+
+## 💻 Hands-On Exercises
+
+Try solving these queries using the `customers` table.
+
+---
+
+### 🔍 Exercise 1
+
+**List all customers in Germany.**
+
+```sql
+SELECT customerNumber,
+       customerName,
+       city
+FROM customers
+WHERE country = 'Germany';
+```
+
+---
+
+### 💳 Exercise 2
+
+**Find customers with a credit limit between 50,000 and 100,000.**
+
+```sql
+SELECT customerName,
+       creditLimit
+FROM customers
+WHERE creditLimit BETWEEN 50000 AND 100000;
+```
+
+---
+
+### ☎️ Exercise 3
+
+**Get the contact name and phone number for all customers in Paris.**
+
+```sql
+SELECT contactFirstName,
+       contactLastName,
+       phone
+FROM customers
+WHERE city = 'Paris';
+```
+
+---
+
+### 📊 Exercise 4
+
+**Count the number of customers in the USA.**
+
+```sql
+SELECT COUNT(*) AS total_customers
+FROM customers
+WHERE country = 'USA';
+```
+
+---
+
+### 🌍 Exercise 5
+
+**List all distinct countries in the dataset.**
+
+```sql
+SELECT DISTINCT country
+FROM customers
+ORDER BY country;
+```
+

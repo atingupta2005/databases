@@ -1,44 +1,50 @@
-# Case Study: Managing Customer Loans & Support at Acme Finance
+# ✅ Case Study: Managing Customer Orders & Payments at ClassicModels
 
-This case study walks through end-to-end database management for a mid-sized home-finance company, **Acme Finance**, using three core tables—**customers**, **lms** (loan management), and **rf_final_data** (support tickets). We’ll cover:
+This case study presents an end-to-end walkthrough of database design and operations for a global scale model distributor, **ClassicModels**. We cover:
 
-- Business background & objectives  
-- Requirements gathering  
-- Conceptual and logical modeling  
-- Physical implementation  
-- Key query patterns and reporting  
-- Performance optimization & maintenance  
-- Lessons learned and best practices  
+* Business background & objectives
+* Requirements gathering
+* Conceptual and logical modeling
+* Physical implementation
+* Key query patterns and reporting
+* Performance optimization & maintenance
+* Lessons learned and best practices
 
 ---
 
 ## 1. Business Background & Objectives
 
-Acme Finance offers home loans to retail customers and maintains a support desk for customer inquiries. Key goals:
+**ClassicModels** is a global distributor of collectible model vehicles. It serves thousands of customers across multiple regions and tracks orders, payments, product inventory, and customer support via a relational database.
 
-- Store accurate customer profiles, loan portfolios, and ticket histories  
-- Enable fast lookups for servicing, compliance, and dashboards  
-- Enforce data integrity across customer, loan, and ticket processes  
-- Scale to tens of millions of records with high performance  
+Key goals:
+
+* Manage customer accounts, sales reps, orders, and payments
+* Ensure inventory accuracy and product categorization
+* Generate fast reports for business insights
+* Enable smooth order-to-cash operations with auditability
 
 ---
 
 ## 2. Requirements Gathering
 
-**Functional Requirements**  
-- Capture customer demographics, income details, and branch information  
-- Track each loan’s terms, disbursements, EMIs, and outstanding balances  
-- Log support tickets with categories (SOA, foreclosure, certificates), statuses, and timestamps  
-- Provide operational reports and dashboards:
-  - Outstanding principal by branch  
-  - Ticket volume and average resolution time by category  
-  - Loan delinquency metrics  
+### ✅ Functional Requirements
 
-**Non-Functional Requirements**  
-- ACID transactions for balance adjustments and status updates  
-- Sub-second lookups on primary keys and frequently queried fields  
-- Daily backups with point-in-time recovery  
-- Ongoing monitoring of slow queries and automated index tuning  
+* Track customer demographics, credit limits, and assigned sales reps
+* Maintain hierarchical product catalog by category (productLine)
+* Record all orders, including line items, status, and delivery info
+* Capture payments (check-based) and enable reconciliation
+* Produce business reports:
+
+  * Revenue per region or product line
+  * Monthly order volumes
+  * Credit risk (customers near or over their credit limit)
+
+### 🔒 Non-Functional Requirements
+
+* ACID compliance for orders and payments
+* Indexed queries for real-time dashboards
+* Daily incremental backups with full weekly snapshots
+* Scalable schema supporting >1 million orders
 
 ---
 
@@ -46,149 +52,166 @@ Acme Finance offers home loans to retail customers and maintains a support desk 
 
 ### 3.1 Conceptual Entities
 
-- **Customer**: demographics, qualification, net income, branch  
-- **Loan (LMS)**: agreement terms, disbursed amount, EMI schedule, balances  
-- **Support Ticket**: request type, status, created date  
+* **Customer**: contact and billing info
+* **Order**: placed by customers
+* **Order Details**: line items per order
+* **Product**: items in catalog
+* **Payment**: check-based transaction
+* **Employee**: sales representatives
+* **Office**: branch location of employees
 
-### 3.2 Logical Schema
+### 3.2 Logical Diagram
 
 ```
-[customers]───1───∞───[lms]
-      │
-      1
-      │
-      ∞
-[rf_final_data]
+[customers]──1──∞──[orders]──1──∞──[orderdetails]──∞──1──[products]
+     │                           │
+     ∞                           ∞
+  [payments]                [employees]──∞──[offices]
 ```
-
-- One **customer** can have many **loans**  
-- One **customer** can raise many **tickets**  
 
 ---
 
 ## 4. Physical Implementation
 
-### 4.1 Table Definitions
+### 4.1 Key Table Definitions
 
 ```sql
 CREATE TABLE customers (
-  customerid        INT PRIMARY KEY,
-  age               INT,
-  sex               CHAR(1),
-  qualification     VARCHAR(20),
-  gross_income      DECIMAL(18,4),
-  nettakehomeincome DECIMAL(18,4),
-  branch_pincode    CHAR(6),
-  INDEX idx_branch  (branch_pincode)
+  customerNumber INT PRIMARY KEY,
+  customerName VARCHAR(50),
+  contactLastName VARCHAR(50),
+  contactFirstName VARCHAR(50),
+  phone VARCHAR(50),
+  addressLine1 VARCHAR(50),
+  city VARCHAR(50),
+  country VARCHAR(50),
+  creditLimit DECIMAL(10,2),
+  salesRepEmployeeNumber INT,
+  FOREIGN KEY (salesRepEmployeeNumber) REFERENCES employees(employeeNumber)
 );
 
-CREATE TABLE lms (
-  agreementid           INT PRIMARY KEY,
-  customerid            INT,
-  net_disbursed_amt     DECIMAL(18,2),
-  outstanding_principal DECIMAL(18,2),
-  emi_dueamt            DECIMAL(18,2),
-  emi_received_amt      DECIMAL(18,2),
-  current_roi           DECIMAL(5,2),
-  FOREIGN KEY (customerid) REFERENCES customers(customerid),
-  INDEX idx_lms_cust     (customerid)
+CREATE TABLE orders (
+  orderNumber INT PRIMARY KEY,
+  orderDate DATE,
+  requiredDate DATE,
+  shippedDate DATE,
+  status VARCHAR(15),
+  comments TEXT,
+  customerNumber INT,
+  FOREIGN KEY (customerNumber) REFERENCES customers(customerNumber)
 );
 
-CREATE TABLE rf_final_data (
-  ticketid           INT PRIMARY KEY,
-  masked_customerid  INT,
-  type               VARCHAR(20),
-  status             VARCHAR(20),
-  date               DATETIME,
-  FOREIGN KEY (masked_customerid) REFERENCES customers(customerid),
-  INDEX idx_ticket_cust (masked_customerid)
+CREATE TABLE orderdetails (
+  orderNumber INT,
+  productCode VARCHAR(15),
+  quantityOrdered INT,
+  priceEach DECIMAL(10,2),
+  PRIMARY KEY (orderNumber, productCode),
+  FOREIGN KEY (orderNumber) REFERENCES orders(orderNumber),
+  FOREIGN KEY (productCode) REFERENCES products(productCode)
 );
-```
-
-### 4.2 Loading Sample Data
-
-```sql
-LOAD DATA LOCAL INFILE 'Customers_31JAN2019 - Short.csv' INTO TABLE customers …
-LOAD DATA LOCAL INFILE 'LMS_31JAN2019 - Short.csv'       INTO TABLE lms …
-LOAD DATA LOCAL INFILE 'RF_Final_Data - Short.csv'        INTO TABLE rf_final_data …
 ```
 
 ---
 
 ## 5. Key Query Patterns & Reporting
 
-### 5.1 Total Outstanding by Branch
+### 5.1 Total Order Value by Customer
 
 ```sql
 SELECT
-  c.branch_pincode,
-  FORMAT(SUM(l.outstanding_principal),2) AS total_outstanding
+  c.customerName,
+  SUM(od.quantityOrdered * od.priceEach) AS total_spent
 FROM customers c
-JOIN lms       l ON c.customerid = l.customerid
-GROUP BY c.branch_pincode;
+JOIN orders o ON c.customerNumber = o.customerNumber
+JOIN orderdetails od ON o.orderNumber = od.orderNumber
+GROUP BY c.customerName
+ORDER BY total_spent DESC
+LIMIT 10;
 ```
 
-### 5.2 Ticket Volume & Avg Age by Type
+---
+
+### 5.2 Late Shipments Summary
 
 ```sql
 SELECT
-  type,
-  COUNT(*)                          AS ticket_count,
-  ROUND(AVG(TIMESTAMPDIFF(HOUR, date, NOW())),1) AS avg_age_hours
-FROM rf_final_data
-WHERE status = 'Close'
-GROUP BY type;
+  o.orderNumber,
+  o.shippedDate,
+  o.requiredDate,
+  DATEDIFF(o.shippedDate, o.requiredDate) AS delay_days
+FROM orders o
+WHERE o.shippedDate > o.requiredDate
+ORDER BY delay_days DESC
+LIMIT 10;
 ```
 
-### 5.3 Delinquency Rate (>30 DPD)
+---
+
+### 5.3 Revenue by Product Line
 
 ```sql
 SELECT
-  ROUND(
-    SUM(CASE WHEN dpd > 30 THEN 1 ELSE 0 END) 
-    / COUNT(*) * 100, 2
-  ) AS delinquency_pct
-FROM lms;
+  p.productLine,
+  SUM(od.quantityOrdered * od.priceEach) AS total_revenue
+FROM orderdetails od
+JOIN products p ON od.productCode = p.productCode
+GROUP BY p.productLine
+ORDER BY total_revenue DESC;
+```
+
+---
+
+### 5.4 Top Customers by Payment Volume
+
+```sql
+SELECT
+  c.customerName,
+  SUM(p.amount) AS total_paid
+FROM payments p
+JOIN customers c ON p.customerNumber = c.customerNumber
+GROUP BY c.customerName
+ORDER BY total_paid DESC
+LIMIT 10;
 ```
 
 ---
 
 ## 6. Performance Optimization & Maintenance
 
-### 6.1 Index Strategy
+### 🔍 6.1 Index Strategy
 
-- `customers(branch_pincode)` for branch-level reports  
-- `lms(customerid)` for quick loan lookups  
-- `rf_final_data(masked_customerid, type, status)` for ticket dashboards  
+* `orders(customerNumber)` — for customer-based filtering
+* `payments(customerNumber)` — for reconciliation queries
+* `products(productLine)` — for product group summaries
+* Composite: `orderdetails(orderNumber, productCode)`
 
-### 6.2 Monitoring & Tuning
+### ⚙ 6.2 Monitoring Tools
 
-- Use `EXPLAIN` to inspect query plans and identify table scans  
-- Enable slow-query logging and review monthly  
-- Drop unused or redundant indexes to improve write speed  
+* Use `EXPLAIN` to verify index usage
+* Enable slow query log
+* Periodic review of `SHOW INDEXES FROM <table>`
 
-### 6.3 Archiving & Partitioning
+### 🧹 6.3 Archival Strategy
 
-- Archive **“Close”** tickets older than one year to `tickets_archive`  
-- Partition **lms** by disbursement year for time-series queries  
+* Archive `orders` and `orderdetails` older than 5 years
+* Create materialized views for frequently accessed aggregates
+* Use partitioning by `orderDate` if table size exceeds 1M rows
 
-### 6.4 Backup & Recovery
+### 💾 6.4 Backup & Recovery
 
-- Nightly full backups via `mysqldump`  
-- Binary logs for point-in-time recovery  
-- Quarterly restore drills to validate procedures  
+* Automate nightly backups via `mysqldump`
+* Enable binary logs for point-in-time recovery
+* Test restore from backup monthly
 
 ---
 
 ## 7. Lessons Learned & Best Practices
 
-- **Design for scale**: choose appropriate data types and partitioning schemes  
-- **Index judiciously**: focus on fields used in joins, filters, and sorts  
-- **Enforce referential integrity**: foreign keys prevent orphaned records  
-- **Use transactions** for multi-step operations (EMI postings, status updates)  
-- **Archive cold data** to keep hot tables lean and queries fast  
-- **Automate maintenance**: index rebuilds, statistics updates, schema changes  
+* Normalize for data integrity, denormalize only for analytics
+* Avoid using NULLable FKs unless optional by design
+* Use compound indexes for JOIN-heavy workloads
+* Protect `creditLimit` with appropriate constraints
+* Monitor storage bloat from overly wide `TEXT` or `BLOB` columns
+* Regularly purge test/demo data from production environments
 
----
-
-This case study provides a practical blueprint for designing, implementing, and managing relational databases at scale—covering data modeling, loading, querying, optimization, and ongoing operations.

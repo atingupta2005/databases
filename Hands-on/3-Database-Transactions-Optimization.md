@@ -1,213 +1,217 @@
 # 4. Database Transactions & Optimization
 
+**Using the ClassicModels Sample Database**
+
 This module covers core techniques to make your data operations both **correct** and **fast**. We’ll explore:
 
-- Database Transactions & ACID Properties  
-- Indexes & Performance Optimization  
-- Normalization vs. Denormalization  
+* Database Transactions & ACID Properties
+* Indexes & Performance Optimization
+* Normalization vs. Denormalization
 
 ---
 
 ## 4.1 Database Transactions & ACID Properties
 
-A **transaction** is a unit of work that must succeed or fail as a whole. Transactions guarantee the ACID properties:
+A **transaction** is a unit of work that must succeed or fail as a whole. Transactions guarantee the **ACID** properties:
 
-- **Atomicity**: All statements succeed or none do.  
-- **Consistency**: Data moves from one valid state to another.  
-- **Isolation**: Concurrent transactions do not interfere.  
-- **Durability**: Committed changes survive crashes.
+* **Atomicity**: All statements succeed or none do
+* **Consistency**: Data moves from one valid state to another
+* **Isolation**: Concurrent transactions don’t interfere
+* **Durability**: Committed changes survive crashes
 
-### Hands-On Examples
+---
 
-1.  Simple money-transfer example (using a hypothetical `balances` table):
+### 🧪 Hands-On Examples (Using `customers` and `payments`)
 
-    ```sql
-    -- Start a transaction
-    START TRANSACTION;
+#### 1. Transfer Payment Credits Between Customers
 
-    -- Deduct 1000 from Customer A
-    UPDATE balances
-    SET balance = balance - 1000
-    WHERE customerid = 12001001;
+```sql
+START TRANSACTION;
 
-    -- Simulate error: negative balance?
-    -- UPDATE balances SET balance = balance - 999999 WHERE customerid = 12001001;
+-- Deduct 1000 from Customer 103
+UPDATE customers
+SET creditLimit = creditLimit - 1000
+WHERE customerNumber = 103;
 
-    -- Add 1000 to Customer B
-    UPDATE balances
-    SET balance = balance + 1000
-    WHERE customerid = 12001002;
+-- Add 1000 to Customer 114
+UPDATE customers
+SET creditLimit = creditLimit + 1000
+WHERE customerNumber = 114;
 
-    -- Commit all changes together
-    COMMIT;
-    ```
+COMMIT;
+```
 
-2.  Rolling back on error:
+#### 2. Rolling Back on Validation Failure
 
-    ```sql
-    START TRANSACTION;
+```sql
+START TRANSACTION;
 
-    UPDATE balances
-    SET balance = balance - 500
-    WHERE customerid = 12001003;
+UPDATE customers
+SET creditLimit = creditLimit - 500
+WHERE customerNumber = 103;
 
-    -- Some validation failure
-    SELECT IF(balance < 0, ROLLBACK, 'OK')
-    FROM balances
-    WHERE customerid = 12001003;
+-- Validate that creditLimit is not negative
+SELECT creditLimit FROM customers
+WHERE customerNumber = 103;
 
-    -- If no errors
-    COMMIT;
-    ```
+-- If creditLimit < 0, ROLLBACK
+-- Simulate manually here
+ROLLBACK;
+-- Otherwise:
+-- COMMIT;
+```
 
-3.  Demonstrating isolation levels:
+#### 3. Demonstrating Isolation Levels
 
-    ```sql
-    -- Session A
-    SET TRANSACTION ISOLATION LEVEL READ COMMITTED;
-    START TRANSACTION;
-    SELECT nettakehomeincome FROM customers WHERE customerid = 12001018;
+```sql
+-- Session A
+SET TRANSACTION ISOLATION LEVEL READ COMMITTED;
+START TRANSACTION;
+SELECT creditLimit FROM customers WHERE customerNumber = 103;
 
-    -- Session B
-    UPDATE customers SET nettakehomeincome = nettakehomeincome + 1000
-    WHERE customerid = 12001018;
-    COMMIT;
+-- Session B (another connection)
+UPDATE customers
+SET creditLimit = creditLimit + 500
+WHERE customerNumber = 103;
+COMMIT;
 
-    -- Back in Session A: re‐run the SELECT to see if it changes mid-transaction.
-    ```
+-- Session A again: rerun SELECT to see isolation behavior
+```
 
 ---
 
 ## 4.2 Indexes & Performance Optimization
 
-Indexes let the database locate rows without scanning the entire table.  
+Indexes allow MySQL to **efficiently locate rows** rather than scanning entire tables.
 
-### Why Index?
+### ✅ Why Use Indexes?
 
-- Speeds up `WHERE` filters and `JOIN` conditions  
-- Supports efficient sorting (`ORDER BY`) and grouping (`GROUP BY`)  
-- But: indexes add overhead on writes and consume storage
+* Speeds up `WHERE`, `JOIN`, and `ORDER BY` operations
+* Helps optimize filtering and grouping
+* Adds overhead for `INSERT`, `UPDATE`, `DELETE`
 
-### Creating Indexes
+---
 
-1.  Single-column index on branch pincode:
+### 🧪 Creating Indexes
 
-    ```sql
-    CREATE INDEX idx_customers_pincode
-    ON customers(branch_pincode);
-    ```
-
-2.  Composite index on ticket type and status:
-
-    ```sql
-    CREATE INDEX idx_rf_type_status
-    ON rf_final_data(type, status);
-    ```
-
-### Comparing Performance
-
-1.  Without index:
-
-    ```sql
-    EXPLAIN SELECT *
-    FROM customers
-    WHERE branch_pincode = '400070';
-    ```
-
-2.  After creating `idx_customers_pincode`:
-
-    ```sql
-    EXPLAIN SELECT *
-    FROM customers
-    WHERE branch_pincode = '400070';
-    ```
-
-    Notice `type: ref` and use of `key: idx_customers_pincode` in the query plan.
-
-### Covering Index
-
-If a query only needs indexed columns, the database can return results **from the index itself**:
+#### 1. Single-Column Index on `country`
 
 ```sql
-CREATE INDEX idx_customers_pincode_income
-ON customers(branch_pincode, nettakehomeincome);
+CREATE INDEX idx_customers_country
+ON customers(country);
 ```
 
-Now:
+#### 2. Composite Index on `status` and `orderDate` in `orders`
 
 ```sql
-SELECT nettakehomeincome
+CREATE INDEX idx_orders_status_date
+ON orders(status, orderDate);
+```
+
+---
+
+### 🔍 Comparing Performance
+
+#### Without Index
+
+```sql
+EXPLAIN SELECT * 
 FROM customers
-WHERE branch_pincode = '400070';
+WHERE country = 'USA';
 ```
 
-can be served directly from the index.
+#### After Creating Index
 
-### Index Maintenance Tips
+```sql
+EXPLAIN SELECT * 
+FROM customers
+WHERE country = 'USA';
+```
 
-- Avoid indexing very low-cardinality columns (e.g., `sex`).  
-- Periodically `ANALYZE TABLE` and `OPTIMIZE TABLE` to refresh statistics.  
-- Drop unused indexes to speed up `INSERT/UPDATE/DELETE`.
+> Look for `type: ref` and `key: idx_customers_country` in the result.
+
+---
+
+### 📦 Covering Index Example
+
+Create an index that covers both `country` and `creditLimit`:
+
+```sql
+CREATE INDEX idx_customers_country_credit
+ON customers(country, creditLimit);
+```
+
+Now this query may be covered by the index:
+
+```sql
+SELECT creditLimit
+FROM customers
+WHERE country = 'USA';
+```
+
+---
+
+### 🛠 Index Maintenance Tips
+
+* Avoid indexing low-cardinality columns (e.g., boolean fields)
+* Run `ANALYZE TABLE` and `OPTIMIZE TABLE` periodically
+* Drop unused indexes to reduce write overhead
 
 ---
 
 ## 4.3 Normalization vs. Denormalization
 
-### Normalization
+---
 
-Organizing tables to eliminate redundancy and ensure data integrity.
+### ✅ Normalization
 
-- **1NF**: Atomic values (no repeated groups).  
-- **2NF**: No partial dependencies on a composite key.  
-- **3NF**: No transitive dependencies—non-key columns depend only on the primary key.
-
-#### Example: Extracting Branch Info
-
-Current `customers` table repeats `branch_pincode`. Normalize by creating a `branches` table:
-
-```sql
--- New table
-CREATE TABLE branches (
-  branch_pincode CHAR(6) PRIMARY KEY,
-  city           VARCHAR(30),
-  region         VARCHAR(20)
-);
-
--- Populate (example)
-INSERT INTO branches VALUES
-('400070','Mumbai','West'),
-('110001','New Delhi','North');
-
--- Drop city from customers and link via foreign key
-ALTER TABLE customers
-DROP COLUMN branch_pincode,
-ADD COLUMN branch_pincode CHAR(6),
-ADD FOREIGN KEY (branch_pincode) REFERENCES branches(branch_pincode);
-```
-
-### Denormalization
-
-Combining tables or duplicating data to speed reads at the cost of storage and write complexity.
-
-#### Example: Customer + Loan Snapshot
-
-```sql
-CREATE TABLE customer_loan_snapshot AS
-SELECT
-  c.customerid,
-  c.qualification,
-  l.agreementid,
-  l.outstanding_principal
-FROM customers AS c
-JOIN lms       AS l USING (customerid);
-```
-
-This wide table lets you retrieve customer plus loan info in one read—ideal for dashboards or high-read workloads.
+**Goal**: Eliminate redundancy and ensure integrity
+**Process**: Break large tables into smaller ones based on dependencies
 
 ---
 
-**Key Takeaways**
+#### 🧱 Example: Normalize `customers` by extracting `salesRepEmployeeNumber`
 
-- Wrap related statements in `BEGIN/COMMIT` to enforce ACID.  
-- Use `EXPLAIN` to verify index usage; design single- and composite indexes for your most common filters and joins.  
-- Normalize to enforce integrity, denormalize selectively to optimize read performance.
+```sql
+-- Create salesRep table
+CREATE TABLE sales_reps (
+  employeeNumber INT PRIMARY KEY,
+  repName VARCHAR(100)
+);
+
+-- Populate from employees
+INSERT INTO sales_reps
+SELECT employeeNumber, CONCAT(firstName, ' ', lastName)
+FROM employees;
+
+-- Link to customers
+ALTER TABLE customers
+ADD FOREIGN KEY (salesRepEmployeeNumber) REFERENCES sales_reps(employeeNumber);
+```
+
+> This removes duplication of sales rep names across multiple customers.
+
+---
+
+### 🔁 Denormalization
+
+**Goal**: Improve read performance by flattening or duplicating data
+**Tradeoff**: May introduce update anomalies and larger storage usage
+
+---
+
+#### 🧾 Example: Create a denormalized customer-order snapshot
+
+```sql
+CREATE TABLE customer_order_summary AS
+SELECT
+  c.customerNumber,
+  c.customerName,
+  o.orderNumber,
+  o.status,
+  SUM(od.quantityOrdered * od.priceEach) AS order_total
+FROM customers AS c
+JOIN orders AS o ON c.customerNumber = o.customerNumber
+JOIN orderdetails AS od ON o.orderNumber = od.orderNumber
+GROUP BY o.orderNumber;
+```
