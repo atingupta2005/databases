@@ -1,11 +1,5 @@
 # NoSQL Databases & MongoDB Basics
 
-**With E-Commerce Data Model Inspired by ClassicModels**
-
-This guide introduces you to the world of non-relational databases, focusing on **MongoDB**—a document-oriented NoSQL store. All examples below are fully runnable and based on a classic e-commerce schema.
-
----
-
 ## ✅ 0. Initial Setup: Create DB and Populate Collections
 
 ```js
@@ -91,10 +85,6 @@ db.posts.insertMany([
   { title: "Sharding Explained", comments: [] }
 ]);
 ```
-
----
-
-Here's your content **cleanly formatted** and ready for documentation or presentation, with consistent markdown structure, spacing, and code formatting.
 
 ---
 
@@ -248,49 +238,3 @@ db.customers.deleteMany({ country: /Test/i });
 
 ---
 
-## 4. Further Exercises – With Data and Solutions
-
----
-
-### 🧪 Exercise 1: Query Posts with >2 Comments
-
-```js
-db.posts.find(
-  { $expr: { $gt: [ { $size: "$comments" }, 2 ] } }
-);
-```
-
----
-
-### 🧪 Exercise 2: Indexing + explain()
-
-```js
-db.customers.createIndex({ customerName: 1, country: 1 });
-
-db.customers.find(
-  { customerName: "Signal Gift Stores", country: "USA" }
-).explain("executionStats");
-```
-
----
-
-### 🧪 Exercise 3: Aggregation – Avg Roles per User
-
-```js
-db.users.aggregate([
-  {
-    $project: {
-      name: 1,
-      roleCount: { $size: "$roles" }
-    }
-  },
-  {
-    $group: {
-      _id: null,
-      avgRoleCount: { $avg: "$roleCount" }
-    }
-  }
-]);
-```
-
----

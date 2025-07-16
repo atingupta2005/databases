@@ -66,7 +66,6 @@ SHOW TABLES;
 
 ## 🧱 Table Structure: `customers`
 
-This is the primary table we'll use in this module:
 
 | Column Name              | Data Type     | Description                        |
 | ------------------------ | ------------- | ---------------------------------- |
