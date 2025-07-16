@@ -87,7 +87,7 @@ Fetch every column for the first 10 customers:
 
 ```sql
 SELECT *
-FROM customers
+FROM Customers
 LIMIT 10;
 ```
 
@@ -99,7 +99,7 @@ Show only `customerid`, `age`, and `gross_income`:
 SELECT customerid,
        age,
        gross_income
-FROM customers
+FROM Customers
 LIMIT 5;
 ```
 
@@ -111,7 +111,7 @@ Find customers older than 40:
 SELECT customerid,
        age,
        nettakehomeincome
-FROM customers
+FROM Customers
 WHERE age > 40
 ORDER BY age;
 ```
@@ -125,7 +125,7 @@ SELECT customerid,
        age,
        sex,
        gross_income
-FROM customers
+FROM Customers
 WHERE sex = 'M'
   AND age < 35
   AND gross_income > 100000;
@@ -138,7 +138,7 @@ List the top 5 earners by net take-home income:
 ```sql
 SELECT customerid,
        nettakehomeincome
-FROM customers
+FROM Customers
 ORDER BY nettakehomeincome DESC
 LIMIT 5;
 ```
@@ -151,7 +151,7 @@ Rename output column headers for clarity:
 SELECT customerid        AS id,
        age               AS customer_age,
        nettakehomeincome AS net_income
-FROM customers
+FROM Customers
 LIMIT 5;
 ```
 
